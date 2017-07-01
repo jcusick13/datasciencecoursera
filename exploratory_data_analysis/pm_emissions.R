@@ -5,16 +5,15 @@ library(ggplot2)
 
 
 # Download dataset
-temp <- tempfile()
-f <- "https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip" 
-download.file(f, temp)
-unlink(temp)
-
 setwd("/Users/JonathanCusick/Documents/local/datasciencecoursera/exploratory_data_analysis")
+f <- "https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip"
+download.file(f, "NEI_data.zip")
+unzip("NEI_data.zip")
+
+# Read into data frame
 NEI <- readRDS("summarySCC_PM25.rds")
 SCC <- readRDS("Source_Classification_Code.rds")
 SCC$SCC <- as.character(SCC$SCC)
-
 
 
 # 1. Have total emissions from PM2.5 decreased in the U.S.?
@@ -29,8 +28,6 @@ plot(x = total_pm25$year, y = total_pm25$emissions, xlab = "Year",
      main = "Total PM2.5 Emissions in the United States (1999 - 2008)") 
 abline(lm(total_pm25$emissions ~ total_pm25$year))
 dev.off()
-
-
 
 
 # 2. Have total emissions from PM2.5 decreased in Baltimore City?
@@ -132,6 +129,5 @@ ggplot(mv_compare, aes(x = year, y = emissions)) +
     facet_grid(city ~ ., scales = "free") + 
     labs(x = "Year", y = "Emissions (tons)",
          title = "Motor Vehicle PM2.5 Emissions",
-         subtitle = "Comparing City to Los Anvs.les County")
+         subtitle = "Baltimore City vs. Los Angeles County")
 ggsave("./images/plot6.png")
-
