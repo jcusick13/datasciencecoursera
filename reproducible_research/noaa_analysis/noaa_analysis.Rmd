@@ -1,7 +1,5 @@
 ---
 title: "NOAA Analysis"
-author: "Jon Cusick"
-date: "August 20, 2017"
 output: html_document
 ---
 
@@ -9,22 +7,40 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+### Synopsis
+The National Oceanic and Atmospheric Administration (NOAA) has been tasked with tracking and recording extreme weather events as well as their damage. They publish monthly updates to *Storm Data*, which makes note of significant weather events at the county level in the United States. This data is freely available to the public and is therefore used for a variety of various research and analysis projects. 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This document makes use of *Storm Data* reports from 1950 - 2011 to answer some basic questions about the effect of weather events on both human population health as well as the economy.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+### Data Processing
 
-```{r cars}
-summary(cars)
+#### Loading the raw dataset
+The original zip file was downloaded from the course website and the two date columns, `BGN_DATE` and `END_DATE` were forced from character strings into a proper date format.
+```{r load_packages, cache = TRUE}
+library(tidyverse)
+library(lubridate)
+
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2",
+              "stormdata.csv.bz2")
+data <- read_csv("stormdata.csv.bz2", locale=locale(tz="UTC"))
+data$BGN_DATE <- parse_date_time(data$BGN_DATE, "mdyHMS")
+data$END_DATE <- parse_date_time(data$END_DATE, "mdyHMS")
 ```
 
-## Including Plots
+#### Exploratory analysis
+Once the data were loaded in, a brief exploration was performed to get a better understanding of the types of events and their frequency, as well as a check for missing data.
+```{r}
+group_by(data, EVTYPE) %>%
+    summarize(Total = n()) %>%
+    filter(Total > 10000)
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+### Results
+discussion and plots here...
+
+
+
+
+
