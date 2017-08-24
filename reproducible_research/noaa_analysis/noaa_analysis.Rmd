@@ -16,7 +16,7 @@ This document makes use of *Storm Data* reports from 1950 - 2011 to answer some 
 
 #### Loading the raw dataset
 The original zip file was downloaded from the course website and the two date columns, `BGN_DATE` and `END_DATE` were forced from character strings into a proper date format.
-```{r load_packages, cache = TRUE}
+```{r, cache=TRUE}
 library(tidyverse)
 library(lubridate)
 library(stringr)
@@ -62,10 +62,10 @@ clean_data <-
 ```
 
 Once the loss magnitude factors were cleaned and the alphabet characters were converted out for numerical values, the economic losses for each event were able to be combined into a single value, allowing them to be comparable across observations.
-```{r}
+```{r, cache=TRUE}
 clean_data$PROPMULTI <- 0
 clean_data$CROPMULTI <- 0
-for (i in 1:length(clean_data)) {
+for (i in 1:nrow(clean_data)) {
     
     # Convert property magnitude values
     if (clean_data[i, "PROPDMGEXP"] == "K") {
@@ -84,6 +84,10 @@ for (i in 1:length(clean_data)) {
     } else {
         clean_data[i, "CROPMULTI"] <- 1000000000
     }
+    
+    if (i %% 10000 == 0) {
+        print (i)
+    }
 }
 
 # Combine all losses to a single column
@@ -94,32 +98,33 @@ clean_data <-
 
 ### Results
 #### Effects on Population Health
-After the proxy health score was summed by each event type, the top ten events were compared. By far and away, tornados have the most negative impact on human population health; their impact score was more than twice that of the second most devastating event, floods. The other events in the top ten were much more similar in terms of their impact.
+After the proxy health score was summed by each event type, the top ten events were compared. The plot below shows the top ten events according to the calculated health score, where higher scores are more damaging to population health. By far and away, tornados have the most negative impact on human population health; their impact score was more than twice that of the second most devastating event, floods.
 ```{r}
 group_by(clean_data, EVTYPE) %>%
     summarize(Health = sum(HEALTH_SCORE)) %>%
     arrange(desc(Health)) %>%
-    filter(Health > 200) %>%
+    top_n(10, Health) %>%
     ggplot(aes(x = EVTYPE, y = Health)) + 
         geom_col() +
-        theme(axis.text.x = element_text(angle=90, hjust=1)) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
         labs(x = "", y = "Negative Health Impact",
              title = "Most Harmful Weather Events for Population Health, 1950-2011")
 ```
 
 #### Economic Consequences
-The weather events with the most dire economic consequences were much more direct to calculate. Since the actual economic losses from damages to property and crops were directly available, no proxy calculation was needed. After looking at the top loss causing events, it is clear that wind is one of the most damaging weather elements. Three of the top ten event types were individual hurricanes, indicating just how much damage they can cause! Also in the top ten are other strong wind events including high winds, tornado, and high winds from winter storms.
+The weather events with the most dire economic consequences were much more direct to calculate. Since the actual economic losses from damages to property and crops were directly available, no proxy calculation was needed. The plot below shows the sum of economic damage each event type caused from 1950-2011. After looking at the top loss causing events, it is clear that floods have the strongest economic impact in the United States. 
 ```{r}
 group_by(clean_data, EVTYPE) %>%
     summarize(Loss = sum(ECONOMIC)) %>%
     top_n(10, Loss) %>%
     ggplot(aes(x = EVTYPE, y = Loss)) +
         geom_col() + 
-        theme(axis.text.x = element_text(angle=90, hjust=1)) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
         labs(x = "", y = "Economic Loss, USD", 
              title = "Top Economic Loss causing Weather Events, 1950-2011")
 
 ```
+
 
 
 
