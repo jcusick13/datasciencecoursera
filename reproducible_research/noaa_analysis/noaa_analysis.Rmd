@@ -10,12 +10,12 @@ knitr::opts_chunk$set(echo = TRUE)
 ### Synopsis
 The National Oceanic and Atmospheric Administration (NOAA) has been tasked with tracking and recording extreme weather events as well as their damage. They publish monthly updates to *Storm Data*, which makes note of significant weather events at the county level in the United States. This data is freely available to the public and is therefore used for a variety of various research and analysis projects. 
 
-This document makes use of *Storm Data* reports from 1950 - 2011 to answer some basic questions about the effect of weather events on both human population health as well as the economy.
+This document uses *Storm Data* reports from 1950 - 2011 to answer some basic questions about the effect of weather events on both human health and economics. After the full analysis, it was determined that flooding is the most impactful weather event in terms of financial losses, while tornadoes were the most damaging to human health.
 
 ### Data Processing
 
 #### Loading the raw dataset
-First, the necessary libraries were loaded.
+First, the necessary libraries were loaded: `tidyverse` and `stringr` for data wrangling and plotting and then `lubridate` for date formatting.
 ```{r load packages}
 library(tidyverse)
 library(lubridate)
