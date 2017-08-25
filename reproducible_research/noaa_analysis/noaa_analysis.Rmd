@@ -15,12 +15,15 @@ This document makes use of *Storm Data* reports from 1950 - 2011 to answer some 
 ### Data Processing
 
 #### Loading the raw dataset
-The original zip file was downloaded from the course website and the two date columns, `BGN_DATE` and `END_DATE` were forced from character strings into a proper date format.
-```{r, cache=TRUE}
+First, the necessary libraries were loaded.
+```{r load packages}
 library(tidyverse)
 library(lubridate)
 library(stringr)
+```
 
+Then, the original zip file was downloaded from the course website and the two date columns, `BGN_DATE` and `END_DATE` were forced from character strings into a proper date format.
+```{r input data, cache=TRUE}
 download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2",
               "stormdata.csv.bz2")
 data <- read_csv("stormdata.csv.bz2", locale=locale(tz="UTC"))
@@ -30,7 +33,7 @@ data$END_DATE <- parse_date_time(data$END_DATE, "mdyHMS")
 
 #### Exploratory analysis
 Once the data were loaded in, a brief exploration was performed to get a better understanding of the major event types as well as a check for missing data in the injury and economic value columns. Here, we can see common weather events such as flood and thunderstorm dominating the event count.
-```{r}
+```{r, eda}
 group_by(data, EVTYPE) %>%
     summarize(Total = n()) %>%
     filter(Total > 10000)
@@ -43,13 +46,13 @@ sum(is.na(data$CROPDMG))
 ```
 #### Preprocessing: Effects on Population Health
 The NOAA data include columns on both injury and fatality count, both of which have an impact on population health. For the purposes of this analysis, a health score will be calculated by weighting and combining both injuries and fatalties. Injury counts will be reduced by 80% before being added to fatality counts. This health score will serve as a proxy of the impact on population health. 
-```{r}
+```{r, health score}
 data <- mutate(data, HEALTH_SCORE = (0.2 * data$INJURIES) + data$FATALITIES)
 ```
 
 #### Preprocessing: Economic Consequences
 Economic losses are reported for both property and crops. However, each numerical loss value is associated with a corresponding alphabetical character used to signify the loss magnitude. *K* for thousands, *M* for millions, and *B* for billions according to the data documentation. When looking at the full set of characters for both crop and property damage, there are many other designations assigned. Since there is no description of them from NOAA, those records were excluded from analysis. Lowercase letters (k, m, b) were kept and converted to uppercase when possible. 
-```{r}
+```{r, econ conseq}
 group_by(data, CROPDMGEXP) %>% summarize(Total = n())
 group_by(data, PROPDMGEXP) %>% summarize(Total = n())
 
@@ -61,35 +64,15 @@ clean_data <-
     mutate(CROPDMGEXP = str_to_upper(CROPDMGEXP))
 ```
 
-Once the loss magnitude factors were cleaned and the alphabet characters were converted out for numerical values, the economic losses for each event were able to be combined into a single value, allowing them to be comparable across observations.
-```{r, cache=TRUE}
-clean_data$PROPMULTI <- 0
-clean_data$CROPMULTI <- 0
-for (i in 1:nrow(clean_data)) {
-    
-    # Convert property magnitude values
-    if (clean_data[i, "PROPDMGEXP"] == "K") {
-        clean_data[i, "PROPMULTI"] <- 1000
-    } else if (clean_data[i, "PROPDMGEXP"] == "M") {
-        clean_data[i, "PROPMULTI"] <- 1000000
-    } else {
-        clean_data[i, "PROPMULTI"] <- 1000000000
-    }
-    
-    # Convert crop magnitude values
-    if (clean_data[i, "CROPDMGEXP"] == "K") {
-        clean_data[i, "CROPMULTI"] <- 1000
-    } else if (clean_data[i, "CROPDMGEXP"] == "M") {
-        clean_data[i, "CROPMULTI"] <- 1000000
-    } else {
-        clean_data[i, "CROPMULTI"] <- 1000000000
-    }
-    
-    if (i %% 10000 == 0) {
-        print (i)
-    }
-}
-
+Once the loss magnitude factors were cleaned and the alphabet characters were converted to numerical multiplier values, the economic losses for each event were able to be combined into a single value, allowing them to be comparable across observations.
+```{r adjust econ losses, cache=TRUE}
+# Create loss multipliers
+clean_data$PROPMULTI <- with(clean_data, if_else(PROPDMGEXP == "K", 1000, 
+                                                 if_else(PROPDMGEXP == "M", 1000000,
+                                                         1000000000)))
+clean_data$CROPMULTI <- with(clean_data, if_else(CROPDMGEXP == "K", 1000,
+                                                 if_else(CROPDMGEXP == "M", 1000000,
+                                                         1000000000)))
 # Combine all losses to a single column
 clean_data <- 
     mutate(clean_data, ECONOMIC = (PROPDMG * PROPMULTI) + (CROPDMG * CROPMULTI))
@@ -99,7 +82,7 @@ clean_data <-
 ### Results
 #### Effects on Population Health
 After the proxy health score was summed by each event type, the top ten events were compared. The plot below shows the top ten events according to the calculated health score, where higher scores are more damaging to population health. By far and away, tornados have the most negative impact on human population health; their impact score was more than twice that of the second most devastating event, floods.
-```{r}
+```{r health results}
 group_by(clean_data, EVTYPE) %>%
     summarize(Health = sum(HEALTH_SCORE)) %>%
     arrange(desc(Health)) %>%
@@ -113,7 +96,7 @@ group_by(clean_data, EVTYPE) %>%
 
 #### Economic Consequences
 The weather events with the most dire economic consequences were much more direct to calculate. Since the actual economic losses from damages to property and crops were directly available, no proxy calculation was needed. The plot below shows the sum of economic damage each event type caused from 1950-2011. After looking at the top loss causing events, it is clear that floods have the strongest economic impact in the United States. 
-```{r}
+```{r econ results}
 group_by(clean_data, EVTYPE) %>%
     summarize(Loss = sum(ECONOMIC)) %>%
     top_n(10, Loss) %>%
@@ -122,7 +105,6 @@ group_by(clean_data, EVTYPE) %>%
         theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
         labs(x = "", y = "Economic Loss, USD", 
              title = "Top Economic Loss causing Weather Events, 1950-2011")
-
 ```
 
 
