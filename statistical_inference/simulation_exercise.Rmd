@@ -1,0 +1,25 @@
+---
+title: "Simulation Exercise"
+author: "Jon Cusick"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Overview
+
+
+### Simulations
+
+
+### Sample vs. Theoritical Mean
+
+
+### Sample vs. Theoritical Variance
+
+
+### Distribution
+
+
