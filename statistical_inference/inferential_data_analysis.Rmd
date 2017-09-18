@@ -1,0 +1,82 @@
+---
+title: "Inferential Data Analysis"
+author: "Jon Cusick"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Overview
+
+
+#### Exploratory Data Analysis
+First, it is important to know how the subjects were divided into groups. We can use the `table` command to retreive counts per group.
+
+```{r load data, message = FALSE, echo = FALSE}
+library(tidyverse)
+tg <- select(ToothGrowth, Tooth.Length = len, Supplement = supp, Dose = dose) %>%
+    mutate(Dosage = as.factor(Dose))
+
+with(tg, table(Dose, Supplement))
+```
+
+Next, we can also observe how the tooth length values are distributed within each treatment method and dosage type.
+```{r eda plot, echo = FALSE, out.width = 500}
+ggplot(tg, aes(x = Dose, y = Tooth.Length, group = Dosage, fill = Dosage)) +
+    geom_boxplot() +
+    scale_fill_brewer(palette = "Dark2") +
+    facet_grid(. ~ Supplement) +
+    labs(x = "Dose (mg/day)", y ="Tooth Length", 
+         caption = "Figure 1. Tooth length by dosage and supplement type")
+```
+
+Finally, we can also get a better feel of how the tooth length values are distributed within each dosage type ignoring the supplement methods. 
+
+```{r dosage hist, echo = FALSE, out.width = 500}
+ggplot(tg, aes(Tooth.Length, group = Dosage, color = Dosage)) +
+    geom_density() +
+    scale_color_brewer(palette = "Dark2") +
+    labs(x = "Tooth Length", y = "Density",
+         caption = "Figure 2. Density of tooth length by Vitamin C dosage")
+
+```
+
+#### Data Summary
+For this dataset, 60 guinea pigs were divided into six groups of ten. Each group was administered a specific dosage of vitamin C (0.5, 1.0, or 2.0 mg/day) via one of two methods (orange juice or ascorbic acid). The average tooth length growth is measured in the change in odontoblasts, the cells responsible for tooth growth.
+
+There was an increase in average tooth length as daily dosage increased, with a response of `r round(filter(tg, Dose == 0.5) %>% summarize(mean(Tooth.Length)), 2)` for a dose of 0.5, `r round(filter(tg, Dose == 1.0) %>% summarize(mean(Tooth.Length)), 2)` for 1.0, and `r round(filter(tg, Dose == 2.0) %>% summarize(mean(Tooth.Length)), 2)` for 2.0. When looking at the density of values in Figure 2, it is apparent that there is quite a bit of overlap in tooth length for 1.0 and 2.0 mg doses of vitamin C per day, while a dosage of 0.5 mg/day appears to mainly result in lower values of tooth growth. 
+
+#### Analysis
+The goal of this section will be to find the single most effective combination of dose and supplement menthod responsible for growing teeth. A permutation test of the mean difference between groups will be administered to test for differences in supplement method as well as a second test bewtween the doses of 1 and 2 mg/day since they had the highest density distribution. 
+
+###### Permutation Testing
+```{r permutation supplement, echo = FALSE, cache = TRUE}
+t.len <- tg$Tooth.Length
+supplement <- as.character(tg$Supplement)
+mean.diff <- function(length, supp) {
+    mean(t.len[supp == "OJ"]) - mean(t.len[supp == "VC"])
+}
+observation <- mean.diff(t.len, supplement)
+permutations <- sapply(1:10000, function(x) mean.diff(t.len, sample(supplement)))
+p.val.supplement <- mean(permutations > observation)
+```
+
+```{r permutation dosage, echo = FALSE, cache = TRUE}
+tg.subset <- filter(tg, Dose >= 1.0)
+t.len <- tg.subset$Tooth.Length
+d <- as.character(tg.subset$Dosage)
+
+mean.diff <- function(t.len, d) {
+    mean(t.len[d == "2"]) - mean(t.len[d == "1"])
+}
+observation <- mean.diff(t.len, d)
+permutations <- sapply(1:10000, function(x) mean.diff(t.len, sample(d)))
+p.val.dose <- mean(permutations > observation)
+```
+
+
+#### Conclusions
+
+
