@@ -1,7 +1,8 @@
 ---
 title: "Inferential Data Analysis"
 author: "Jon Cusick"
-output: html_document
+output:
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -12,29 +13,23 @@ knitr::opts_chunk$set(echo = TRUE)
 The [ToothGrowth](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/ToothGrowth.html) dataset within R records information on the effect of increased tooth length from vitamin C in guinea pigs. This project will look to determine if there is a significant difference between dosage levels and supplement methods. If a difference is determined, an effort will be made to find out the most effective method of tooth growth.
 
 #### Exploratory Data Analysis
-First, it is important to know how the subjects were divided into groups. We can use the `table` command to retreive counts per group.
+First, we can look at how the tooth length values are distributed within each treatment method and dosage type.
 
-```{r load data, message = FALSE, echo = FALSE}
+```{r eda plot, echo = FALSE, message = FALSE, out.width = "60%"}
 library(tidyverse)
 tg <- select(ToothGrowth, Tooth.Length = len, Supplement = supp, Dose = dose) %>%
     mutate(Dosage = as.factor(Dose))
 
-with(tg, table(Dose, Supplement))
-```
-
-Next, we can also observe how the tooth length values are distributed within each treatment method and dosage type.
-```{r eda plot, echo = FALSE, out.width = 500}
 ggplot(tg, aes(x = Dose, y = Tooth.Length, group = Dosage, fill = Dosage)) +
     geom_boxplot() +
     scale_fill_brewer(palette = "Dark2") +
-    facet_grid(. ~ Supplement) +
     labs(x = "Dose (mg/day)", y ="Tooth Length", 
          caption = "Figure 1. Tooth length by dosage and supplement type")
 ```
 
-Finally, we can also get a better feel of how the tooth length values are distributed within each dosage type, ignoring the supplement methods. 
+Next, we can also get a better feel of how the tooth length values are distributed within each dosage type, ignoring the supplement methods. 
 
-```{r dosage hist, echo = FALSE, out.width = 500}
+```{r dosage hist, echo = FALSE, out.width = "60%"}
 ggplot(tg, aes(Tooth.Length, group = Dosage, color = Dosage)) +
     geom_density() +
     scale_color_brewer(palette = "Dark2") +
@@ -91,12 +86,12 @@ boot.mean.975 <- quantile(boot.mean, 0.975)
 
 # Mean tooth length distribution of 2.0 mg/day, Orange Juice group
 group.means <- group_by(tg, Supplement, Dosage) %>% summarize(x = mean(Tooth.Length))
-oj.2.mean <- group.means[(group.means$Supplement == "OJ" & group.means$Dosage == "2"), "x"]
+oj.2.mean <- group.means[(group.means$Supplement=="OJ" & group.means$Dosage=="2"),"x"]
 ```
 
 Combining these two results together, a significance test was performed on the mean tooth length of the group who received 2.0 mg/day via orange juice. This was done using bootstrapping to determine the mean of the tooth length distribution. It was found that the mean tooth length value of the 2.0 mg/day cohort, administered via orange juice was greater than the 95th percentile of the mean empirical population distribution obtained via bootstrapping (`r oj.2.mean` > `r boot.mean.975`) as shown by Figure 3 below. The black line represents the mean from the 2.0 mg/day orange juice group.
 
-```{r boot dist, echo = FALSE, out.width = 500}
+```{r boot dist, echo = FALSE, out.width = "60%"}
 boot.mean.df <- data.frame(u = boot.mean, Significance = NA)
 boot.mean.df$Significance <- ifelse((boot.mean.df$u >= boot.mean.025 & 
                                     boot.mean.df$u <= boot.mean.975),
@@ -118,17 +113,20 @@ It was found that the mean tooth length value of the 2.0 mg/day cohort, administ
 #### Appendix A - Plotting Code
 
 Figure 1
-```{r a eda plot, eval = FALSE, out.width = 500}
+```{r a eda plot, eval = FALSE, message = FALSE}
+library(tidyverse)
+tg <- select(ToothGrowth, Tooth.Length = len, Supplement = supp, Dose = dose) %>%
+    mutate(Dosage = as.factor(Dose))
+
 ggplot(tg, aes(x = Dose, y = Tooth.Length, group = Dosage, fill = Dosage)) +
     geom_boxplot() +
     scale_fill_brewer(palette = "Dark2") +
-    facet_grid(. ~ Supplement) +
     labs(x = "Dose (mg/day)", y ="Tooth Length", 
          caption = "Figure 1. Tooth length by dosage and supplement type")
 ```
 
 Figure 2
-```{r a dosage hist, eval = FALSE, out.width = 500}
+```{r a dosage hist, eval = FALSE}
 ggplot(tg, aes(Tooth.Length, group = Dosage, color = Dosage)) +
     geom_density() +
     scale_color_brewer(palette = "Dark2") +
@@ -137,7 +135,7 @@ ggplot(tg, aes(Tooth.Length, group = Dosage, color = Dosage)) +
 ```
 
 Figure 3
-```{r a boot dist, eval = FALSE, out.width = 500}
+```{r a boot dist, eval = FALSE}
 boot.mean.df <- data.frame(u = boot.mean, Significance = NA)
 boot.mean.df$Significance <- ifelse((boot.mean.df$u >= boot.mean.025 & 
                                     boot.mean.df$u <= boot.mean.975),

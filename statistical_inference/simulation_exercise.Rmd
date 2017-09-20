@@ -2,7 +2,7 @@
 title: "Exponential Simulation Exercise"
 author: "Jon Cusick"
 output:
-  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -34,7 +34,7 @@ for (i in 1:n) {
 #### Sample vs. Theoretical Mean
 The theoretical mean of the expontial distribution is 5 when $\lambda = 0.2$. The plot below compares this theoretical value (denoted by the vertical black line) with a histogram of the distribution of averages from the simulation. Due to the the Law of Large Numbers, the simulated mean of `r mean(sim.results$mean)` very closely approximates the theoretical value because of the high number of simulations.
 
-```{r mean histogram, message = FALSE, echo = FALSE, out.width = 500}
+```{r mean histogram, message = FALSE, echo = FALSE, out.width = "55%"}
 library(ggplot2)
 ggplot(sim.results, aes(mean)) + 
     geom_histogram(binwidth = 0.03, fill = "dodgerblue4") +
@@ -45,7 +45,7 @@ ggplot(sim.results, aes(mean)) +
 
 It can also be seen that as the number of simulations increases, the simulated mean moves closer and closer to the true distribution mean. The plot below shows the cumulative mean (the mean of all simulation results up to and including the current simulation number) as the number of simulations increased.
 
-```{r mean convergence, echo = FALSE, out.width = 500}
+```{r mean convergence, echo = FALSE, out.width = "55%"}
 ggplot(sim.results, aes(x = n, y = cum.mean)) +
     geom_line(color = "dodgerblue4") +
     labs(x = "Number of simulations", y = "Cumulative mean",
@@ -56,7 +56,7 @@ ggplot(sim.results, aes(x = n, y = cum.mean)) +
 #### Sample vs. Theoretical Variance
 The same principle demonstrated with the mean also holds true for the simulated variance. The distribution of variance of the 40 exponentials within each simulation will very closely approximate the true variance of the exponential distribution itself. In the plot below, the vertical line shows exponential variance ($\lambda = 0.2$) of 25 and it is clear that the simulations provided a good approximation, at `r mean(sim.results$variance)`.
 
-```{r variance histogram, echo = FALSE, out.width = 500}
+```{r variance histogram, echo = FALSE, out.width = "55%"}
 ggplot(sim.results, aes(variance)) +
     geom_histogram(binwidth = 0.25, fill = "dodgerblue4") +
     labs(x = "Variance", y = "Count",
@@ -66,7 +66,7 @@ ggplot(sim.results, aes(variance)) +
 
 Again, likewise to the cumulative simulation mean converging to the theoretical mean, the cumulative variance of the simulations begins to converge to the theoretical variance value as the number of simulations increased.
 
-```{r variance convergence, echo = FALSE, out.width = 500}
+```{r variance convergence, echo = FALSE, out.width = "55%"}
 ggplot(sim.results, aes(x = n, y = cum.variance)) +
     geom_line(color = "dodgerblue4") +
     labs(x = "Number of simulations", y = "Cumulative variance",
@@ -78,7 +78,7 @@ ggplot(sim.results, aes(x = n, y = cum.variance)) +
 #### Distribution
 A common way to compare if two sets of samples come from the same distribution is to use a quantile-quantile plot. These types of figures plot the $n$-th quantile of two distriubtions, using distribution A for the $x$ value and distribution B for the $y$ value. If the quantiles for each plot truly are drawn from the same distribution, it would be expected that every point in the figure falls on the $y = x$. However, if the two distributions are not identical, but related in a linear way, the points are expected to fall along a diagonal line still. Below, we can plot the simulated quantiles against the theoretical to determine that there is indeed a very close match of the two distributions. The only differences are noticed out in the two extreme ends of the simulated distribution.
 
-```{r distribution q-q, echo = FALSE, out.width = 500}
+```{r distribution q-q, echo = FALSE, out.width = "55%"}
 ggplot(sim.results, aes(sample = mean)) +
     stat_qq(color = "dodgerblue4", distribution = qnorm) +
     labs(x = "Theoretical", y ="Sample", 
@@ -90,7 +90,7 @@ ggplot(sim.results, aes(sample = mean)) +
 #### Appendix A: Plotting code
 
 Figure 1
-```{r a mean histogram, message = FALSE, eval = FALSE, out.width = 500}
+```{r a mean histogram, message = FALSE, eval = FALSE, out.width = "60%"}
 library(ggplot2)
 ggplot(sim.results, aes(mean)) + 
     geom_histogram(binwidth = 0.03, fill = "dodgerblue4") +
@@ -100,7 +100,7 @@ ggplot(sim.results, aes(mean)) +
 ```
 
 Figure 2
-```{r a mean convergence, eval = FALSE, out.width = 500}
+```{r a mean convergence, eval = FALSE, out.width = "60%"}
 ggplot(sim.results, aes(x = n, y = cum.mean)) +
     geom_line(color = "dodgerblue4") +
     labs(x = "Number of simulations", y = "Cumulative mean",
@@ -110,7 +110,7 @@ ggplot(sim.results, aes(x = n, y = cum.mean)) +
 
 
 Figure 3
-```{r a variance histogram, eval = FALSE, out.width = 500}
+```{r a variance histogram, eval = FALSE, out.width = "60%"}
 ggplot(sim.results, aes(variance)) +
     geom_histogram(binwidth = 0.25, fill = "dodgerblue4") +
     labs(x = "Variance", y = "Count",
@@ -120,7 +120,7 @@ ggplot(sim.results, aes(variance)) +
 
 
 Figure 4
-```{r a variance convergence, eval = FALSE, out.width = 500}
+```{r a variance convergence, eval = FALSE, out.width = "60%"}
 ggplot(sim.results, aes(x = n, y = cum.variance)) +
     geom_line(color = "dodgerblue4") +
     labs(x = "Number of simulations", y = "Cumulative variance",
@@ -129,10 +129,11 @@ ggplot(sim.results, aes(x = n, y = cum.variance)) +
 ```
 
 Figure 5
-```{r a distribution q-q, eval = FALSE, out.width = 500}
+```{r a distribution q-q, eval = FALSE, out.width = "60%"}
 ggplot(sim.results, aes(sample = mean, color = "dogerblue4")) +
     stat_qq(color = "dodgerblue4", distribution = qnorm) +
     labs(x = "Theoretical", y ="Sample", 
-         caption = "Figure 5. Q-Q plot of exponential simulated means distribution vs. normal distribution")
+         caption = paste0("Figure 5. Q-Q plot of exponential simulated means ",
+                            "distribution vs. normal distribution"))
 ```
 
