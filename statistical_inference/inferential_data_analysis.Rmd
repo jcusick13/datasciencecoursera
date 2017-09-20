@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 #### Overview
-
+The [ToothGrowth](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/ToothGrowth.html) dataset within R records information on the effect of increased tooth length from vitamin C in guinea pigs. This project will look to determine if there is a significant difference between dosage levels and supplement methods. If a difference is determined, an effort will be made to find out the most effective method of tooth growth.
 
 #### Exploratory Data Analysis
 First, it is important to know how the subjects were divided into groups. We can use the `table` command to retreive counts per group.
@@ -32,7 +32,7 @@ ggplot(tg, aes(x = Dose, y = Tooth.Length, group = Dosage, fill = Dosage)) +
          caption = "Figure 1. Tooth length by dosage and supplement type")
 ```
 
-Finally, we can also get a better feel of how the tooth length values are distributed within each dosage type ignoring the supplement methods. 
+Finally, we can also get a better feel of how the tooth length values are distributed within each dosage type, ignoring the supplement methods. 
 
 ```{r dosage hist, echo = FALSE, out.width = 500}
 ggplot(tg, aes(Tooth.Length, group = Dosage, color = Dosage)) +
@@ -40,7 +40,6 @@ ggplot(tg, aes(Tooth.Length, group = Dosage, color = Dosage)) +
     scale_color_brewer(palette = "Dark2") +
     labs(x = "Tooth Length", y = "Density",
          caption = "Figure 2. Density of tooth length by Vitamin C dosage")
-
 ```
 
 #### Data Summary
@@ -49,10 +48,11 @@ For this dataset, 60 guinea pigs were divided into six groups of ten. Each group
 There was an increase in average tooth length as daily dosage increased, with a response of `r round(filter(tg, Dose == 0.5) %>% summarize(mean(Tooth.Length)), 2)` for a dose of 0.5, `r round(filter(tg, Dose == 1.0) %>% summarize(mean(Tooth.Length)), 2)` for 1.0, and `r round(filter(tg, Dose == 2.0) %>% summarize(mean(Tooth.Length)), 2)` for 2.0. When looking at the density of values in Figure 2, it is apparent that there is quite a bit of overlap in tooth length for 1.0 and 2.0 mg doses of vitamin C per day, while a dosage of 0.5 mg/day appears to mainly result in lower values of tooth growth. 
 
 #### Analysis
-The goal of this section will be to find the single most effective combination of dose and supplement menthod responsible for growing teeth. A permutation test of the mean difference between groups will be administered to test for differences in supplement method as well as a second test bewtween the doses of 1 and 2 mg/day since they had the highest density distribution. 
+The goal of this section will be to find out if there is a difference in tooth length due to vitamin C dosage and/or supplement methods. Permutation tests of the mean difference between groups will be administered to test for differences in supplement method as well as dosages. Due to the minimal overlap of 0.5 mg/day with the other dosages, the dosage permutation test will only include 1.0 and 2.0 mg/day. 
 
-###### Permutation Testing
-```{r permutation supplement, echo = FALSE, cache = TRUE}
+##### Permutation Testing
+```{r permutation supplement, cache = TRUE}
+# Permutation testing of supplement method
 t.len <- tg$Tooth.Length
 supplement <- as.character(tg$Supplement)
 mean.diff <- function(length, supp) {
@@ -63,7 +63,8 @@ permutations <- sapply(1:10000, function(x) mean.diff(t.len, sample(supplement))
 p.val.supplement <- mean(permutations > observation)
 ```
 
-```{r permutation dosage, echo = FALSE, cache = TRUE}
+```{r permutation dosage, cache = TRUE}
+# Permutation testing of dosage groups
 tg.subset <- filter(tg, Dose >= 1.0)
 t.len <- tg.subset$Tooth.Length
 d <- as.character(tg.subset$Dosage)
@@ -76,7 +77,77 @@ permutations <- sapply(1:10000, function(x) mean.diff(t.len, sample(d)))
 p.val.dose <- mean(permutations > observation)
 ```
 
+A permutation test of mean difference between supplement groups showed that orange juice results in a larger tooth length when compared to ascorbic acid (10,000 random label permuatations, $H_0:$ There is no difference between orange juice and ascorbic acid in tooth length, $p = 0.03$). A second mean difference permutation test showed that vitamin C doses of 2.0 mg/day resulted in a larger tooth length when compared to 1.0 mg/day (10,000 random label permutations, $H_0$: There is no difference between 1.0 and 2.0 mg/day vitamin C and tooth length $p = 0.00$).
+
+```{r bootstrapping, cache = TRUE}
+# Bootstrap mean tooth length distribution
+dat <- tg$Tooth.Length
+n <- length(dat)
+bootstrap <- 10000
+resample <- matrix(sample(dat, n * bootstrap, replace = TRUE), bootstrap, n)
+boot.mean <- apply(resample, 1, mean)
+boot.mean.025 <- quantile(boot.mean, 0.025)
+boot.mean.975 <- quantile(boot.mean, 0.975)
+
+# Mean tooth length distribution of 2.0 mg/day, Orange Juice group
+group.means <- group_by(tg, Supplement, Dosage) %>% summarize(x = mean(Tooth.Length))
+oj.2.mean <- group.means[(group.means$Supplement == "OJ" & group.means$Dosage == "2"), "x"]
+```
+
+Combining these two results together, a significance test was performed on the mean tooth length of the group who received 2.0 mg/day via orange juice. This was done using bootstrapping to determine the mean of the tooth length distribution. It was found that the mean tooth length value of the 2.0 mg/day cohort, administered via orange juice was greater than the 95th percentile of the mean empirical population distribution obtained via bootstrapping (`r oj.2.mean` > `r boot.mean.975`) as shown by Figure 3 below. The black line represents the mean from the 2.0 mg/day orange juice group.
+
+```{r boot dist, echo = FALSE, out.width = 500}
+boot.mean.df <- data.frame(u = boot.mean, Significance = NA)
+boot.mean.df$Significance <- ifelse((boot.mean.df$u >= boot.mean.025 & 
+                                    boot.mean.df$u <= boot.mean.975),
+                               "Normal", "Significant")
+boot.mean.df$Significance <- as.factor(boot.mean.df$Significance)
+ggplot(boot.mean.df, aes(x = u, fill = Significance)) +
+    geom_histogram(binwidth = 0.1) +
+    scale_fill_brewer(palette = "Dark2", direction = -1) +
+    geom_vline(aes(xintercept = oj.2.mean)) + 
+    labs(x = "Mean Tooth Length", y = "Count",
+         caption = "Figure 3. Distribution of bootstrapped mean tooth length compared to 
+         cohort mean of 2.0 mg/day, orange juice")
+```
 
 #### Conclusions
+It was found that the mean tooth length value of the 2.0 mg/day cohort, administered via orange juice surpassed the 95% bootstrap confidence interval for mean tooth length among all groups. This is to be considered a significant result against the null hypothesis that all treatment methods and doses work equally well as one another. This result supposes that the 10,000 rounds of bootstrapping was enough for the observed distribution to successfully represent the population distribution of tooth length.
 
 
+#### Appendix A - Plotting Code
+
+Figure 1
+```{r a eda plot, eval = FALSE, out.width = 500}
+ggplot(tg, aes(x = Dose, y = Tooth.Length, group = Dosage, fill = Dosage)) +
+    geom_boxplot() +
+    scale_fill_brewer(palette = "Dark2") +
+    facet_grid(. ~ Supplement) +
+    labs(x = "Dose (mg/day)", y ="Tooth Length", 
+         caption = "Figure 1. Tooth length by dosage and supplement type")
+```
+
+Figure 2
+```{r a dosage hist, eval = FALSE, out.width = 500}
+ggplot(tg, aes(Tooth.Length, group = Dosage, color = Dosage)) +
+    geom_density() +
+    scale_color_brewer(palette = "Dark2") +
+    labs(x = "Tooth Length", y = "Density",
+         caption = "Figure 2. Density of tooth length by Vitamin C dosage")
+```
+
+Figure 3
+```{r a boot dist, eval = FALSE, out.width = 500}
+boot.mean.df <- data.frame(u = boot.mean, Significance = NA)
+boot.mean.df$Significance <- ifelse((boot.mean.df$u >= boot.mean.025 & 
+                                    boot.mean.df$u <= boot.mean.975),
+                               "Normal", "Significant")
+boot.mean.df$Significance <- as.factor(boot.mean.df$Significance)
+ggplot(boot.mean.df, aes(x = u, fill = Significance)) +
+    geom_histogram(binwidth = 0.1) +
+    scale_fill_brewer(palette = "Dark2", direction = -1) +
+    geom_vline(aes(xintercept = oj.2.mean)) + 
+    labs(x = "Mean Tooth Length", y = "Count",
+         caption = "Figure 3. Distribution of bootstrapped mean tooth length compared to 
+         cohort mean of 2.0 mg/day, orange juice")
+```
