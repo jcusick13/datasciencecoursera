@@ -1,0 +1,46 @@
+---
+title: "The Effect of Transmission Type on Automobile Fuel Consumption"
+author: "Jon Cusick"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+Main Questions:  
+1. Is automatic or manual transmission better for mpg?  
+2. Quantify the difference between the two types of transmission.
+
+
+This analysis will make use of the `mtcars` (ADD LINK) dataset, a collection of fuel useage for 32 cars, each of which is a 1973-1974 model. An initial exploratory plot shows a high collection of automatic cars at lower MPG levels while manual vehicles are distributed somewhat more evenly at mid to high levels of MPG.
+
+```{r eda, message = FALSE, out.width = "65%"}
+library(tidyverse)
+library(broom)
+library(knitr)
+
+dat <- mtcars %>% select(mpg, am) %>% 
+    mutate(Transmission = ifelse(am == 0, "Automatic", "Manual"))
+
+ggplot(dat, aes(x = mpg, fill = Transmission)) +
+    geom_density() +
+    scale_fill_brewer(palette = "Dark2") + 
+    facet_wrap(~ Transmission) +
+    labs(x = "Miles per gallon", y = "Density", 
+         title = "Distribution of MPG average for 32 vehicles by Transmission Type")
+```
+
+
+A linear regression model was fit without an intercept to the dataset for better intrepretability of both transmission categories. A summary table of the estimates as well as a residual plot can be seen below.
+
+TODO: Add residual plot along x colored by trans
+
+```{r linear_model}
+fit <- lm(mpg ~ Transmission + 0, data = dat)
+kable(tidy(fit))
+
+err <- resid(fit)
+
+
+```
