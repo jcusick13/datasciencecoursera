@@ -8,39 +8,71 @@ output: pdf_document
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+### Executive Summary
 Main Questions:  
 1. Is automatic or manual transmission better for mpg?  
 2. Quantify the difference between the two types of transmission.
 
-
-This analysis will make use of the `mtcars` (ADD LINK) dataset, a collection of fuel useage for 32 cars, each of which is a 1973-1974 model. An initial exploratory plot shows a high collection of automatic cars at lower MPG levels while manual vehicles are distributed somewhat more evenly at mid to high levels of MPG.
+### Analysis
+This analysis will make use of the `mtcars` [dataset](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/mtcars.html), a collection of fuel useage for 32 cars, each of which is a 1973-1974 model. An initial exploratory plot (figure A1) shows a high collection of automatic cars at lower MPG levels while manual vehicles are distributed somewhat more evenly at mid to high levels of MPG. A regression model will be used to  
 
 ```{r eda, message = FALSE, out.width = "65%"}
 library(tidyverse)
 library(broom)
 library(knitr)
+library(car)
 
-dat <- mtcars %>% select(mpg, am) %>% 
-    mutate(Transmission = ifelse(am == 0, "Automatic", "Manual"))
+dat <- mtcars %>% mutate(Transmission = ifelse(am == 0, "Automatic", "Manual"))
+```
 
+To begin, a simple linear model was fit using all of the available data of the `mtcars` set as predictors of MPG. There are likely unnecessary variables and colinearity in this model, but it is a good starting point to get a general understanding of the dataset. The variable `am` is a binary indicator, with 1 representing manual transmissions and 0 representing automatic transmissions. The slope estimate provided currently indicates that there is about a 2.5 MPG increase when driving a manual car. However, the only significant variable in this model, as described by the p-value is `wt`, the weight of each car. 
+
+```{r init_test, out.width = "65%"}
+
+init_fit <- lm(mpg ~ ., data = mtcars)
+kable(tidy(init_fit))
+```
+
+However, it is always possible that there is a unseen influence from other variables in the dataset acting on the coefficients for the simple model above. A common tool used to assess the impact of this effect, colinearity, is analyzing the variance inflation factor (VIF). The VIF describes the change in variance in a regression model due to colinearity from a given variable. When calculating the VIF for the above model, it suggests that some variables should indeed be culled from this model in order to better understand transmission's influence on mpg. A rule of thumb is to discard variables where $VIF > 5$. 
+
+```{r vif, message = FALSE}
+kable((vif(init_fit)))
+
+#vif(lm(mpg ~ drat + vs + am + wt, data = mtcars))
+```
+
+This results with only the variables `drat` (rear axle ratio), `vs` (engine type), and `am` (transmission type). Vehicle weight, `wt`, was also considered because of it's initial significance value from above. When looking at the VIF from a model using only these four variables, the values are all well below 5. The final linear regression model was an additive model using the variables chosen above. A summary table from this model can be seen below and the residual plot is can be found in the appendix (figure A2).
+
+```{r linear_model, out.width = "65%"}
+fit <- lm(mpg ~ drat + vs + am, data = mtcars)
+kable(tidy(fit))
+
+# Residual data frame
+err <- resid(fit)
+err_df <- data.frame(index = 1:32, e = err, Transmission = dat$Transmission)
+
+# Transmission confidence intervals
+kable(confint(fit))
+```
+
+
+The residual errors do not display any obvious pattern suggesting heteroskedasticity or any other gross underlying failure of the model. Interpreting the summary statistics indicates that with a 95% confidence rate, manual transmission cars have an improvement of 4.67 miles per gallon (+/- 3.76) over automatic transmission cars.
+
+### Appendix A - Figures
+```{r fig_a1, out.width = "65%"}
 ggplot(dat, aes(x = mpg, fill = Transmission)) +
     geom_density() +
     scale_fill_brewer(palette = "Dark2") + 
     facet_wrap(~ Transmission) +
     labs(x = "Miles per gallon", y = "Density", 
-         title = "Distribution of MPG average for 32 vehicles by Transmission Type")
+         caption = "Figure A1. Distribution of MPG average for 32 vehicles by transmission type")
 ```
 
-
-A linear regression model was fit without an intercept to the dataset for better intrepretability of both transmission categories. A summary table of the estimates as well as a residual plot can be seen below.
-
-TODO: Add residual plot along x colored by trans
-
-```{r linear_model}
-fit <- lm(mpg ~ Transmission + 0, data = dat)
-kable(tidy(fit))
-
-err <- resid(fit)
-
-
+```{r fig_a2, out.width = "65%"}
+ggplot(err_df, aes(x = index, y = e, color = Transmission)) +
+    geom_point() +
+    scale_color_brewer(palette = "Dark2") +
+    labs(x = "Car", y = "Residual Error", 
+         caption = "Figure A2. Linear model residuals by transmission type")
 ```
+
