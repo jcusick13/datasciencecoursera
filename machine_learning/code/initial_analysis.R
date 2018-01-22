@@ -1,0 +1,47 @@
+library(tidyverse)
+library(caret)
+library(parallel)
+library(doParallel)
+
+# Download and import original data
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",
+              "data/pml_training.csv")
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",
+              "data/pml_testing.csv")
+orig <- read_csv("data/pml_training.csv")
+final_test <- read_csv("data/pml_testing.csv")
+
+# Split into train/test sets
+set.seed(42)
+inTrain <- createDataPartition(orig$classe, p = 0.75)[[1]]
+train <- orig[inTrain,]
+test <- orig[-inTrain,]
+
+# Configure parallel processing
+cluster <- makeCluster(detectCores() - 1)
+registerDoParallel(cluster)
+
+# Configure train control object for cross-validation
+rfFitControl <- trainControl(method = "cv", number = 5, allowParallel = TRUE)
+
+# Fit random forest model
+rfFit <- train(classe ~ roll_belt + pitch_belt + yaw_belt + roll_forearm + pitch_forearm +
+                   yaw_forearm + roll_arm + pitch_arm + yaw_arm + roll_dumbbell + pitch_dumbbell +
+                   yaw_dumbbell, method="rf", data=train, trControl=rfFitControl)
+
+# Cleanup parallel processing
+stopCluster(cluster)
+registerDoSEQ()
+
+# Apply model to test set, check results
+rfRes <- data.frame(Obs=test$classe,
+                    Pred=predict.train(rfFit, test))
+rfRes$Correct <- ifelse(rfRes$Obs == rfRes$Pred, 1, 0)
+table(rfRes$Correct) # 0.9838
+confusionMatrix.train(rfFit)
+
+# Run model on final testing set
+test_res <- data.frame(Sample=seq(1,20),
+                       Pred=predict.train(rfFit, final_test))
+
+
