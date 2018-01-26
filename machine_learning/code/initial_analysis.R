@@ -17,6 +17,10 @@ inTrain <- createDataPartition(orig$classe, p = 0.75)[[1]]
 train <- orig[inTrain,]
 test <- orig[-inTrain,]
 
+#
+# Random Forest Model -----
+#
+
 # Configure parallel processing
 cluster <- makeCluster(detectCores() - 1)
 registerDoParallel(cluster)
@@ -40,8 +44,23 @@ rfRes$Correct <- ifelse(rfRes$Obs == rfRes$Pred, 1, 0)
 table(rfRes$Correct) # 0.9838
 confusionMatrix.train(rfFit)
 
+# Save confusion matrix as plot
+cm <- as.data.frame(confusionMatrix.train(rfFit)[[1]]) %>%
+    rename(Frequency = Freq)
+ggplot(cm, aes(x = Reference, y = Prediction)) +
+    geom_tile(aes(fill = Frequency)) +
+    geom_text(aes(label = round(Frequency, 3)), size = 3) +
+    scale_fill_gradient(low = "lightgoldenrod1", high = "darkgoldenrod4") + 
+    labs(x = "Observation", title = "Random Forest Confusion Matrix",
+         subtitle = "5-Fold Cross Validation")
+ggsave("./images/rfFit_confusion_matrix.jpeg")
+
 # Run model on final testing set
 test_res <- data.frame(Sample=seq(1,20),
                        Pred=predict.train(rfFit, final_test))
+
+#
+# Boosted Random Forest Model -----
+#
 
 
