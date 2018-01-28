@@ -10,11 +10,14 @@ knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 ```
 
 ### Intro
+Participants in a study agreed to wear accelerometers on their belt, forearm, arm, and a dumbbell while they exercised. The different movements they were asked to do were broken down into one of five classes (A-E in the dataset). This analysis will look to predict which movement class each participant did, given the sensor data. More data about the study can be found at http://groupware.les.inf.puc-rio.br/har. 
 
 ### Methods
 After downloading the datasets and performing an initial exploratory analysis, a first attempt model was run to see roughly how good some of the basic variables were in prediction. The roll, pitch, and yaw of each of the sensor locations (belt, forearm, arm, and dumbbell) seemed like a good place to start since they explicity captured the movement of each exercise. Pending the results of this set of variables, a second modeling attempt would be to add in the deviation variables of each movement measurement (i.e. stdev, kurtosis, etc.)
 
 Past experience has shown that random forests are some of the best "bang for your buck" models right off the shelf, so I chose a random forest implementation using the `caret` package as a starting point. Though random forests have great predictabiliy prior to a large amount of tuning, a major drawback is that they can run quite slow. I followed the advice from Len Greski's [github site](https://github.com/lgreski/datasciencectacontent/blob/master/markdown/pml-randomForestPerformance.md) and enabled parallel processing of my model.
+
+As described in the results section below, a random forest model worked exceptionally well off the bat, but just to have some basis for comparison, I ran a gradient boosting model as well (with the same set of dependent variables).
 
 
 ### Results
@@ -25,10 +28,17 @@ rfFit <- train(classe ~ roll_belt + pitch_belt + yaw_belt + roll_forearm + pitch
                    yaw_dumbbell, method="rf", data=train, trControl=rfFitControl)
 ```
 
-When training the random forest model, I passed in a command to also run 5 fold cross-validation. In this method, the training set was first split into 5 (roughly) equal subsets. The model was then trained 5 seperate times - in each iteration, a different fold was left out at train time and then used for testing. This allows for a robust estimate for model accuracy, as the accuracy from each of the 5 trained models is then averaged.
+When training the random forest model, I passed in a command to also run 5 fold cross-validation. In this method, the training set was first split into 5 (roughly) equal subsets. The model was then trained 5 seperate times - in each iteration, a different fold was left out at train time and then used for testing. This allows for a robust estimate for model accuracy, as the accuracy from each of the 5 trained models is then averaged. As seen in the confusion matrix below, there is outstanding agreement between predicted and observed classes. Class B provided the most difficulty for the model, though the model still performed strongly in this class.
 
 ![](/Users/JonathanCusick/Documents/local/datasciencecoursera/machine_learning/images/rfFit_confusion_matrix.jpeg){width=70%}
 
 The cross-validation yielded an average overall accuracy of `0.9846`, which lined up closely to the `0.9838` accuracy from running the trained model on the intermediate test set (25% of the original training data).
 
-However, how well would this model be expected to perform on the test set of 20 observations? Namely, what is the expected out of sample error? Simply the cross-validation accuracy subtracted from 1, in this case `0.0154`.
+The above process was repeated using a gradient tree boosted model with the same variables. However, the averaged cross-validation accuracy was slighly lower, at `0.9302`. As expected, the model also performed slightly worse on the test set, yielding an accuracy of `0.9305`. The resulting cross-validation confusion matrix for this model can be seen below. Again, note the slightly higher disagreement in predicted vs. observed classes when compared to the random forest model. 
+
+![](/Users/JonathanCusick/Documents/local/datasciencecoursera/machine_learning/images/gbmFit_confusion_matrix.jpeg){width=70%}
+
+
+However, how well would this model be expected to perform on the test set of 20 observations? Namely, what is the expected out of sample error? Simply the cross-validated accuracy subtracted from 1. In the case of the random forest model, the expected OOB error is `0.0154`.
+
+This error estimate also turns out to be a good one; the error rate on the final test set was 0.0%!

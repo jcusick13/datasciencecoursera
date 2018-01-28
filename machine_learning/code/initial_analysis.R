@@ -63,4 +63,34 @@ test_res <- data.frame(Sample=seq(1,20),
 # Boosted Random Forest Model -----
 #
 
+# Configure parallel processing
+cluster <- makeCluster(detectCores() - 1)
+registerDoParallel(cluster)
 
+# Configure train control object for cross-validation
+gbmFitControl <- trainControl(method = "cv", number = 5, allowParallel = TRUE)
+
+# Fit random forest model
+gbmFit <- train(classe ~ roll_belt + pitch_belt + yaw_belt + roll_forearm + pitch_forearm +
+                   yaw_forearm + roll_arm + pitch_arm + yaw_arm + roll_dumbbell + pitch_dumbbell +
+                   yaw_dumbbell, method="gbm", data=train, trControl=gbmFitControl)
+
+# Cleanup parallel processing
+stopCluster(cluster)
+registerDoSEQ()
+
+# Apply model to test set, check results
+gbmRes <- data.frame(Obs=test$classe,
+                    Pred=predict.train(gbmFit, test))
+gbmRes$Correct <- ifelse(gbmRes$Obs == gbmRes$Pred, 1, 0)
+table(gbmRes$Correct) # 0.9305
+confusionMatrix.train(gbmFit)
+gbmCM <- as.data.frame(confusionMatrix.train(gbmFit)[[1]]) %>%
+    rename(Frequency = Freq)
+ggplot(gbmCM, aes(x = Reference, y = Prediction)) +
+    geom_tile(aes(fill = Frequency)) +
+    geom_text(aes(label = round(Frequency, 3)), size = 3) +
+    scale_fill_gradient(low = "lightgoldenrod1", high = "darkgoldenrod4") + 
+    labs(x = "Observation", title = "Gradient Tree Boosting Confusion Matrix",
+         subtitle = "5-Fold Cross Validation")
+ggsave("./images/gbmFit_confusion_matrix.jpeg")
