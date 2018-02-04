@@ -1,0 +1,44 @@
+---
+title: "USGS Earthquake Feed"
+date: "2/3/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+```
+
+```{r, gather_data, cache = TRUE}
+
+eq_month <- "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.csv"
+download.file(eq_month, "data/usgs_eq_significant_month.csv")
+```
+
+
+#### Significant Earthquakes, January 2018
+USGS publishes a real time data feed of earthquakes around the world. Below is an interactive map of the significant recorded earthquakes for the past month.
+```{r, mapping}
+library(tidyverse)
+library(leaflet)
+
+eq <- read_csv("data/usgs_eq_significant_month.csv") %>%
+    rename(lat=latitude, lng=longitude) %>%
+    mutate(colors=if_else(mag >= 7, "red",
+                          if_else(mag >= 6, "orange",
+                                  if_else(mag >= 5, "yellow", "green"))))
+
+map <- leaflet() %>%
+    addTiles() %>%
+    addCircleMarkers(lng=eq$lng, lat=eq$lat, radius=eq$mag,
+                     popup=paste("Magnitude:", as.character(eq$mag), '\nDate:',
+                                 as.character(eq$time)),
+                     fillColor=eq$colors, color=eq$colors,
+                     fillOpacity=0.65) %>%
+    addLegend(position="bottomleft",
+              colors=c("red", "orange", "yellow", "green"),
+              labels=c("7+", "6-7", "5-6", "< 5"),
+              title="Magnitude")
+
+map
+
+```
